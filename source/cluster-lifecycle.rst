@@ -14,7 +14,10 @@ Create Management Node, Network, Filesystem
   ``terraform.tfvars`` and edit the credentials, the management shape and the
   availability domain for the management VM and NFS mount target.
 - They run ``terrafrom validate``, ``terraform plan``,  ``terraform apply``
-- Terrafrom runs it's DAG. On the ``mgmt`` VM the file ``userdata/bootstrap`` is copied on and run
+- Terrafrom runs it's DAG. On the ``mgmt`` VM the OCI
+  `User Data <https://docs.cloud.oracle.com/iaas/Content/Compute/References/images.htm?Highlight=init%20userdata>`_ 
+  facility copies the `cloud-init <https://cloudinit.readthedocs.io/en/latest/>`_ 
+  file ``userdata/bootstrap`` on and it is run
 - ``bootstrap`` creates an ansible inventory with the FQDN of the ``mgmt`` node in the group ``management``
 - ``bootstrap`` uses ``ansible-pull`` to get the playbook from the GitHub repo.
   Unless the user has overridden it by setting ``ansible_branch`` in
