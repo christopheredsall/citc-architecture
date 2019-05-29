@@ -13,10 +13,10 @@ steps:
 - script: |
     echo "installing Sphinx"
     sudo apt-get update
-    sudo apt-get install python3-sphinx texlive-latex-base texlive-latex-recommended texlive-fonts-recommended
+    sudo apt-get install python3-sphinx texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra
 
 - script: make html
   displayName: 'Make HTML'
 
-- script: make latexpdf
+- script: timeout 10 make latexpdf
   displayName: 'Make PDF'
