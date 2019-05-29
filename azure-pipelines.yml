@@ -20,3 +20,8 @@ steps:
 
 - script: timeout 10 make latexpdf
   displayName: 'Make PDF'
+
+- task: PublishPipelineArtifact@0
+  inputs:
+    artifactName: 'citc-architecture.pdf'
+    targetPath: 'build/latex/citc-architecture.pdf '
