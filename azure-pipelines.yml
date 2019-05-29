@@ -12,8 +12,8 @@ pool:
 steps:
 - script: |
     echo "installing Sphinx"
-    sudo apt-get install python3-sphinx
-    
+    sudo apt-get install python3-sphinx texlive-latex-base
+
 - script: make html
   displayName: 'Make HTML'
 
