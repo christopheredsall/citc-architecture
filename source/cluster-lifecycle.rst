@@ -58,9 +58,9 @@ Create Compute Nodes
   is a python program using the Oracle python API for OCI to start the instance
   using the node name(s) supplied by slurm as the first argument
 - ``/usr/local/bin/startnode`` uses a python
-  `asyncio Event Loop <https://docs.python.org/3/library/asyncio-eventloop.html`_ to start the nodes
+  `asyncio Event Loop <https://docs.python.org/3/library/asyncio-eventloop.html>`_ to start the nodes
 - ``/usr/local/bin/startnode`` uses a custom `retry strategy
-  <https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/sdk_behaviors/retries.html`_
+  <https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/sdk_behaviors/retries.html>`_
   to catch and recover from API request throtilling "429" return codes.
 - The region, compartment, AD and VCN infromation is read from
   ``/etc/citc/startnode.yaml`` on the managemnt node that was populated by ther
