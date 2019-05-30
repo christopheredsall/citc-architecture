@@ -14,6 +14,7 @@ Contents:
    sources
    stack
    development
+   network
    cluster-lifecycle
 
 Indices and tables
