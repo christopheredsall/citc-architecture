@@ -16,6 +16,17 @@ Create Management Node, Network, Filesystem
 - They run ``terrafrom validate``, ``terraform plan``,  ``terraform apply``
 - Terraform runs it's DAG creating the resources specified and writes out the
   file ``terrafrom.tfstate``
+- Terraform also writes a few files to the management node directly which contain:
+
+  - Authentication for the mgmt node to be able to create/destroy nodes
+  - Information about what each machine type has in it so that Slurm can schedule to
+    them (shapes.yaml)
+  - Information about what Git branch should be used for ansible-pull on created compute
+    nodes and config which is used to know *where* to start nodes (startnode.yaml)
+
+  These files are read by various parts of the Ansible playbook to configure
+  the mgmt node.
+
 - Terraform prints out the IPv4 address of the management VM
 - On the ``mgmt`` VM the OCI
   `User Data <https://docs.cloud.oracle.com/iaas/Content/Compute/References/images.htm?Highlight=init%20userdata>`_ 
