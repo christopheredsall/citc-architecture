@@ -1,0 +1,27 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: |
+    echo "installing Sphinx"
+    sudo apt-get update
+    sudo apt-get install python3-sphinx texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-latex-extra
+
+- script: make html
+  displayName: 'Make HTML'
+
+- script: timeout 10 make latexpdf
+  displayName: 'Make PDF'
+
+- task: PublishPipelineArtifact@0
+  inputs:
+    artifactName: 'citc-architecture.pdf'
+    targetPath: 'build/latex/citc-architecture.pdf '
