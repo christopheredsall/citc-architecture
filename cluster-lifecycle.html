@@ -1,0 +1,209 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Cluster Lifecycle &#8212; citc-architecture 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Network Diagram" href="network.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cluster-lifecycle">
+<h1>Cluster Lifecycle<a class="headerlink" href="#cluster-lifecycle" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>The end user has a tenancy, configured user, sufficient service limits.</p>
+</div>
+<div class="section" id="create-management-node-network-filesystem">
+<h2>Create Management Node, Network, Filesystem<a class="headerlink" href="#create-management-node-network-filesystem" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The end user clones the <a class="reference external" href="https://github.com/ACRC/oci-cluster-terraform">terrafrom repo</a></li>
+<li>They copy the provided <code class="docutils literal"><span class="pre">terraform.tfvars.example</span></code> file to
+<code class="docutils literal"><span class="pre">terraform.tfvars</span></code> and edit the credentials, the management shape and the
+availability domain for the management VM and NFS mount target.</li>
+<li>They run <code class="docutils literal"><span class="pre">terrafrom</span> <span class="pre">validate</span></code>, <code class="docutils literal"><span class="pre">terraform</span> <span class="pre">plan</span></code>,  <code class="docutils literal"><span class="pre">terraform</span> <span class="pre">apply</span></code></li>
+<li>Terraform runs it’s DAG creating the resources specified and writes out the
+file <code class="docutils literal"><span class="pre">terrafrom.tfstate</span></code></li>
+<li>Terraform prints out the IPv4 address of the management VM</li>
+<li>On the <code class="docutils literal"><span class="pre">mgmt</span></code> VM the OCI
+<a class="reference external" href="https://docs.cloud.oracle.com/iaas/Content/Compute/References/images.htm?Highlight=init%20userdata">User Data</a>
+facility copies the <a class="reference external" href="https://cloudinit.readthedocs.io/en/latest/">cloud-init</a>
+file <code class="docutils literal"><span class="pre">userdata/bootstrap</span></code> on and it is run</li>
+<li><code class="docutils literal"><span class="pre">bootstrap</span></code> creates an ansible inventory with the FQDN of the <code class="docutils literal"><span class="pre">mgmt</span></code> node in the group <code class="docutils literal"><span class="pre">management</span></code></li>
+<li><code class="docutils literal"><span class="pre">bootstrap</span></code> uses <code class="docutils literal"><span class="pre">ansible-pull</span></code> to get the playbook from the GitHub repo.
+Unless the user has overridden it by setting <code class="docutils literal"><span class="pre">ansible_branch</span></code> in
+<code class="docutils literal"><span class="pre">terraform.tfvars</span></code> then it will pull the branch default branch, (currently
+<code class="docutils literal"><span class="pre">3</span></code>)</li>
+<li>The <code class="docutils literal"><span class="pre">management.yml</span></code> ansible playbook is run</li>
+<li>The playbook is split in to sections and ordered so that the user is able to
+log in the management node as soon as possible, even while some of the tasks
+are still running</li>
+<li>Various roles are applied to install amongst other things<ul>
+<li>the 389ds directory server to manager user accounts</li>
+<li>sssd</li>
+<li>mysql which is needed for the slurm accounting database</li>
+<li>slurm</li>
+</ul>
+</li>
+<li>Older versions of the ansible playbook pulled the slurm package from Matt’s <a class="reference external" href="https://copr.fedorainfracloud.org/coprs/milliams/citc/">Fedora copr</a> repository</li>
+<li>Newer versions use the <a class="reference external" href="https://build.opensuse.org/project/show/home:Milliams:citc">OpenSuSE Build Service</a></li>
+</ul>
+</div>
+<div class="section" id="configure">
+<h2>Configure<a class="headerlink" href="#configure" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The end user waits until the ansible playbook has finished, seen in <code class="docutils literal"><span class="pre">/root/ansible-pull.log</span></code></li>
+<li>They create a yaml file <code class="docutils literal"><span class="pre">~opc/limits.yaml</span></code></li>
+<li>They run the script <code class="docutils literal"><span class="pre">~opc/finish</span></code> which parses the <code class="docutils literal"><span class="pre">limits.yaml</span></code> file and
+writes the file <code class="docutils literal"><span class="pre">/mnt/shared/etc/slurm/slurm.conf</span></code> on the NFS share which is
+included by <code class="docutils literal"><span class="pre">/etc/slurm/slurm.conf</span></code> and restarts <code class="docutils literal"><span class="pre">slurmctld</span></code>.</li>
+<li>They may optionally add users</li>
+</ul>
+</div>
+<div class="section" id="create-compute-nodes">
+<h2>Create Compute Nodes<a class="headerlink" href="#create-compute-nodes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>When a user submits a compute job slurm checks</li>
+<li>If a node or nodes need to be stareted Slurm calls <code class="docutils literal"><span class="pre">/usr/local/bin/startnode</span></code> which
+is a python program using the Oracle python API for OCI to start the instance
+using the node name(s) supplied by slurm as the first argument</li>
+<li><code class="docutils literal"><span class="pre">/usr/local/bin/startnode</span></code> uses a python
+<a class="reference external" href="https://docs.python.org/3/library/asyncio-eventloop.html">asyncio Event Loop</a> to start the nodes</li>
+<li><code class="docutils literal"><span class="pre">/usr/local/bin/startnode</span></code> uses a custom <a class="reference external" href="https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/en/latest/sdk_behaviors/retries.html">retry strategy</a>
+to catch and recover from API request throtilling “429” return codes.</li>
+<li>The region, compartment, AD and VCN infromation is read from
+<code class="docutils literal"><span class="pre">/etc/citc/startnode.yaml</span></code> on the managemnt node that was populated by ther
+ansible playbook</li>
+<li>Once the instance has started <code class="docutils literal"><span class="pre">citc_oci.py</span></code> waits for the VNIC to become
+available and then informs slurm using <code class="docutils literal"><span class="pre">scontrol</span></code> of the newly started node’s
+IPv4 address</li>
+<li>As with the management node the create instance call passes the userdata for cloud-init.</li>
+<li>The compute node user data comes from the file <code class="docutils literal"><span class="pre">/home/slurm/bootstrap.sh</span></code> on the management node</li>
+<li>The compute node <code class="docutils literal"><span class="pre">bootstrap.sh</span></code><ul>
+<li>adds some host SSH keys so that slurm can work</li>
+<li>installs git</li>
+<li>creates an ansible inventory with the FQDN of the compute node in the <code class="docutils literal"><span class="pre">compute</span></code> group</li>
+<li>uses <code class="docutils literal"><span class="pre">ansible-pull</span></code> to grab the ansible repo and run the <code class="docutils literal"><span class="pre">compute.yml</span></code> playbook</li>
+</ul>
+</li>
+<li>The <code class="docutils literal"><span class="pre">compute.yml</span></code> playbook configures the node as a slurm compute node.</li>
+<li>Once <code class="docutils literal"><span class="pre">slurmd</span></code> has been restarted it checks in with the slurm master (the
+<code class="docutils literal"><span class="pre">mgmt</span></code> node) and jobs get sent to it</li>
+</ul>
+</div>
+<div class="section" id="node-power-saving">
+<h2>Node Power Saving<a class="headerlink" href="#node-power-saving" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>If no job has run on a node for the duration of <code class="docutils literal"><span class="pre">SuspendTime</span></code> seconds in
+<code class="docutils literal"><span class="pre">/mnt/shared/etc/slurm/slurm.conf</span></code>, default is 900 seconds, i.e. 15 minutes,
+then slurm calls <code class="docutils literal"><span class="pre">/usr/local/bin/stopnode</span></code> which terminates the instance.</li>
+</ul>
+</div>
+<div class="section" id="destroy-cluster">
+<h2>Destroy Cluster<a class="headerlink" href="#destroy-cluster" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Once the end user has finished with their computing they can <code class="docutils literal"><span class="pre">terrafrom</span>
+<span class="pre">destory</span></code> from where they checked out the terraform repo.</li>
+<li>in <code class="docutils literal"><span class="pre">compute.tf</span></code> the terraform provisioner <code class="docutils literal"><span class="pre">remote-exec</span></code> will SSH on to
+the management node and call <code class="docutils literal"><span class="pre">/usr/local/bin/stopnode</span></code> on any
+still running compute nodes</li>
+<li>terraform will walk the DAG destroying resources in reverse order.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Cluster Lifecycle</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#create-management-node-network-filesystem">Create Management Node, Network, Filesystem</a></li>
+<li><a class="reference internal" href="#configure">Configure</a></li>
+<li><a class="reference internal" href="#create-compute-nodes">Create Compute Nodes</a></li>
+<li><a class="reference internal" href="#node-power-saving">Node Power Saving</a></li>
+<li><a class="reference internal" href="#destroy-cluster">Destroy Cluster</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="network.html" title="previous chapter">Network Diagram</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/cluster-lifecycle.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Matt Williams and Christopher Edsall.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/cluster-lifecycle.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
